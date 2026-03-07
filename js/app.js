@@ -44,140 +44,7 @@ const DASHBOARD_CONTENT = {
     }
 };
 
-// Login handling
-document.getElementById('loginForm').addEventListener('submit', function (e) {
-    e.preventDefault();
-
-    const usernameInput = document.getElementById('usernameInput').value.trim();
-    const passwordInput = document.getElementById('passwordInput').value;
-    const errorMsg = document.getElementById('loginError');
-
-    // Auto-append domain if not present
-    let email = usernameInput;
-    if (!email.includes("@")) {
-        email = email + "@eskilstuna.se";
-    }
-
-    // Find user
-    const user = USERS.find(u => u.email === email && u.password === passwordInput);
-
-    if (user) {
-        // Hide error if previously shown
-        errorMsg.style.display = 'none';
-
-        // Update UI with user info
-        document.getElementById('userRole').textContent = user.title;
-        document.getElementById('userAvatar').textContent = user.initials;
-
-        // Inject Role-Specific Dashboard Content directly into the layout without nesting
-        if (DASHBOARD_CONTENT[user.roleKey]) {
-            const content = DASHBOARD_CONTENT[user.roleKey];
-            const homePage = document.getElementById('homePage');
-            if (homePage) {
-                const header = homePage.querySelector('.page-header');
-                if (header) header.innerHTML = content.header;
-
-                const kpis = homePage.querySelector('.kpi-grid');
-                if (kpis) kpis.innerHTML = content.kpis;
-
-                const widgets = homePage.querySelector('.widget-grid');
-                if (widgets) widgets.innerHTML = content.widgets;
-            }
-        }
-
-        // Transition to dashboard
-        document.getElementById('loginPage').style.display = 'none';
-        document.getElementById('dashboard').classList.add('active');
-
-        // Reset form
-        e.target.reset();
-    } else {
-        // Show error
-        errorMsg.textContent = "Invalid username or password. Please try again.";
-        errorMsg.style.display = 'block';
-    }
-});
-
-// Logout handling
-const logoutBtn = document.getElementById('logoutBtn');
-if (logoutBtn) {
-    logoutBtn.addEventListener('click', function () {
-        // Transition back to login
-        document.getElementById('dashboard').classList.remove('active');
-        document.getElementById('loginPage').style.display = 'flex';
-
-        // Reset to home page on next login
-        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-        document.querySelector('.nav-item[data-page="home"]').classList.add('active');
-
-        document.querySelectorAll('.page-section').forEach(section => section.classList.remove('active'));
-        document.getElementById('homePage').classList.add('active');
-    });
-}
-
-// Navigation
-document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', function () {
-        const page = this.getAttribute('data-page');
-
-        // Update active nav
-        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-        this.classList.add('active');
-
-        // Update page
-        document.querySelectorAll('.page-section').forEach(section => section.classList.remove('active'));
-        const targetPage = document.getElementById(page + 'Page');
-
-        if (targetPage) {
-            targetPage.classList.add('active');
-        }
-
-        else {
-            console.warn('Page section not found:', page + 'Page');
-        }
-    });
-});
-
-// Widget navigation links
-document.querySelectorAll('[data-nav]').forEach(link => {
-    link.addEventListener('click', function (e) {
-        e.preventDefault();
-        const page = this.getAttribute('data-nav');
-        const targetNav = document.querySelector(`.nav-item[data-page="${page}"]`);
-
-        if (targetNav) {
-            targetNav.click();
-        }
-
-        else {
-            console.warn('Nav item not found for:', page);
-        }
-    });
-});
-
-// Portfolio tabs
-document.querySelectorAll('.portfolio-tab').forEach(tab => {
-    tab.addEventListener('click', function () {
-        const target = this.getAttribute('data-tab');
-
-        document.querySelectorAll('.portfolio-tab').forEach(t => t.classList.remove('active'));
-        this.classList.add('active');
-
-        document.querySelectorAll('.portfolio-content').forEach(c => c.classList.remove('active'));
-        const targetTab = document.getElementById(target + 'Tab');
-
-        if (targetTab) {
-            targetTab.classList.add('active');
-        }
-
-        else {
-            console.warn('Tab content not found for:', target + 'Tab');
-        }
-    });
-});
-
-// --- Discovery & Sweep Module ---
-
+// --- Discovery & Sweep Data ---
 const INFRA_DATA = {
     stats: {
         assets: 14352,
@@ -189,7 +56,7 @@ const INFRA_DATA = {
         {
             id: 'citizen',
             label: 'Citizen Access & Identity',
-            color: '#10b981', // green-500
+            color: '#10b981',
             nodes: [
                 { label: 'BankID 4.0 API', status: 'active' },
                 { label: 'Open ID Connect', status: 'active' },
@@ -201,7 +68,7 @@ const INFRA_DATA = {
         {
             id: 'ops',
             label: 'Municipal Operations',
-            color: '#f59e0b', // amber-500
+            color: '#f59e0b',
             nodes: [
                 { label: 'LMS School Server', status: 'active' },
                 { label: 'GIS Spatial DB', status: 'active' },
@@ -213,7 +80,7 @@ const INFRA_DATA = {
         {
             id: 'admin',
             label: 'Administrative Backbone',
-            color: '#3b82f6', // blue-500
+            color: '#3b82f6',
             nodes: [
                 { label: 'Unit4 Business World', status: 'active' },
                 { label: 'Personec HR System', status: 'active' },
@@ -225,7 +92,7 @@ const INFRA_DATA = {
         {
             id: 'tech',
             label: 'Technical Base',
-            color: '#a855f7', // purple-500
+            color: '#a855f7',
             nodes: [
                 { label: 'Cisco Nexus Core', status: 'active' },
                 { label: 'PureStorage FlashArray', status: 'active' },
@@ -245,6 +112,84 @@ const INFRA_DATA = {
     ]
 };
 
+// Login handling
+document.getElementById('loginForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const usernameInput = document.getElementById('usernameInput').value.trim();
+    const passwordInput = document.getElementById('passwordInput').value;
+    const errorMsg = document.getElementById('loginError');
+
+    let email = usernameInput;
+    if (!email.includes("@")) {
+        email = email + "@eskilstuna.se";
+    }
+
+    const user = USERS.find(u => u.email === email && u.password === passwordInput);
+
+    if (user) {
+        errorMsg.style.display = 'none';
+        document.getElementById('userRole').textContent = user.title;
+        document.getElementById('userAvatar').textContent = user.initials;
+
+        if (DASHBOARD_CONTENT[user.roleKey]) {
+            const content = DASHBOARD_CONTENT[user.roleKey];
+            const homePage = document.getElementById('homePage');
+            if (homePage) {
+                const header = homePage.querySelector('.page-header');
+                if (header) header.innerHTML = content.header;
+                const kpis = homePage.querySelector('.kpi-grid');
+                if (kpis) kpis.innerHTML = content.kpis;
+                const widgets = homePage.querySelector('.widget-grid');
+                if (widgets) widgets.innerHTML = content.widgets;
+            }
+        }
+
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('dashboard').classList.add('active');
+        e.target.reset();
+
+        // Initial setup for Landscape if it's the target (though home is default)
+        initLandscapeModule();
+    } else {
+        errorMsg.textContent = "Invalid username or password. Please try again.";
+        errorMsg.style.display = 'block';
+    }
+});
+
+// Logout handling
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', function () {
+        document.getElementById('dashboard').classList.remove('active');
+        document.getElementById('loginPage').style.display = 'flex';
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        document.querySelector('.nav-item[data-page="home"]').classList.add('active');
+        document.querySelectorAll('.page-section').forEach(section => section.classList.remove('active'));
+        document.getElementById('homePage').classList.add('active');
+    });
+}
+
+// Navigation
+document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', function () {
+        const page = this.getAttribute('data-page');
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        this.classList.add('active');
+        document.querySelectorAll('.page-section').forEach(section => section.classList.remove('active'));
+        const targetPage = document.getElementById(page + 'Page');
+        if (targetPage) {
+            targetPage.classList.add('active');
+            if (page === 'landscape') {
+                renderTopology(); // Render immediately when viewing
+                populateStats();
+                startSecurityLog(true); // Silent start if already viewed
+            }
+        }
+    });
+});
+
+// Discovery & Sweep Functions
 function initLandscapeModule() {
     const sweepBtn = document.getElementById('startSweepBtn');
     const overlay = document.getElementById('sweepOverlay');
@@ -252,34 +197,28 @@ function initLandscapeModule() {
     const statusText = document.getElementById('sweepStatus');
     const sweepLog = document.getElementById('sweepLog');
     const container = document.getElementById('landscapeContainer');
-    const securityLog = document.getElementById('securityLog');
 
     if (!sweepBtn || sweepBtn.dataset.initialized) return;
     sweepBtn.dataset.initialized = "true";
 
+    // Initial silent render so content is visible immediately
+    renderTopology();
+    populateStats();
+    startSecurityLog(true);
+
     sweepBtn.addEventListener('click', () => {
-        // Start Sweep Animation
         overlay.classList.remove('hidden');
         let progress = 0;
-        const messages = [
-            "Pinging Subnet 10.0.0.0/8...",
-            "Discovered 4 major clusters...",
-            "Mapping logical dependencies...",
-            "Validating software signatures...",
-            "Correlating asset IDs...",
-            "Finalizing topology export..."
-        ];
+        const messages = ["Pinging Subnet...", "Mapping clusters...", "Validating software...", "Finalizing topology..."];
 
         const interval = setInterval(() => {
-            progress += 1.5;
+            progress += 2;
             if (progress > 100) progress = 100;
             progressBar.style.width = `${progress}%`;
 
             const msgIndex = Math.floor((progress / 100) * (messages.length - 1));
-            if (messages[msgIndex]) {
-                statusText.textContent = messages[msgIndex];
-                sweepLog.textContent = `[UDP/TCP SCAN] ${Math.random().toString(16).slice(2, 10)}: Found node...`;
-            }
+            statusText.textContent = messages[msgIndex];
+            sweepLog.textContent = `[UDP/TCP SCAN] ${Math.random().toString(16).slice(2, 10)}: Found node...`;
 
             if (progress >= 100) {
                 clearInterval(interval);
@@ -288,208 +227,112 @@ function initLandscapeModule() {
                     container.classList.remove('opacity-40');
                     renderTopology();
                     populateStats();
-                    startSecurityLog();
-                }, 800);
+                    startSecurityLog(false); // Animated start
+                }, 500);
             }
-        }, 30);
+        }, 40);
     });
 }
 
 function renderTopology() {
     const svg = document.getElementById('topologySvg');
     if (!svg) return;
-    svg.innerHTML = ''; // Clear previous
+    svg.innerHTML = '';
+    const centerX = 400, centerY = 300, clusterRadius = 180;
 
-    const width = 800;
-    const height = 600;
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const clusterRadius = 180;
-
-    // Create central "Municipality Hub"
-    const hub = createNode(centerX, centerY, 40, '#1e293b', 'SMART CITY CORE', 'active', true);
-    svg.appendChild(hub);
+    svg.appendChild(createNode(centerX, centerY, 40, '#1e293b', 'SMART CITY CORE', 'active', true));
 
     INFRA_DATA.clusters.forEach((cluster, i) => {
         const angle = (i / INFRA_DATA.clusters.length) * Math.PI * 2;
         const cx = centerX + Math.cos(angle) * clusterRadius;
         const cy = centerY + Math.sin(angle) * clusterRadius;
 
-        // Draw connection to hub
         svg.appendChild(createLine(centerX, centerY, cx, cy));
-
-        // Draw Cluster Node
         svg.appendChild(createNode(cx, cy, 30, cluster.color, cluster.label, 'active', true));
 
-        // Draw sub-nodes
         cluster.nodes.forEach((node, j) => {
             const subAngle = angle - 0.5 + (j / (cluster.nodes.length - 1)) * 1.0;
             const sx = cx + Math.cos(subAngle) * 85;
             const sy = cy + Math.sin(subAngle) * 85;
-
             svg.appendChild(createLine(cx, cy, sx, sy));
             svg.appendChild(createNode(sx, sy, 12, cluster.color, node.label, node.status));
         });
     });
 
-    // Add scanning line animation to SVG
+    // Scan line animation
     const scanLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-    scanLine.setAttribute('x1', '0');
-    scanLine.setAttribute('y1', '0');
-    scanLine.setAttribute('x2', '800');
-    scanLine.setAttribute('y2', '0');
-    scanLine.setAttribute('stroke', 'rgba(20, 184, 166, 0.2)');
+    scanLine.setAttribute('x1', '0'); scanLine.setAttribute('y1', '0');
+    scanLine.setAttribute('x2', '800'); scanLine.setAttribute('y2', '0');
+    scanLine.setAttribute('stroke', 'rgba(20, 184, 166, 0.1)');
     scanLine.setAttribute('stroke-width', '40');
-
-    const animate = document.createElementNS("http://www.w3.org/2000/svg", "animate");
-    animate.setAttribute('attributeName', 'y1');
-    animate.setAttribute('from', '-40');
-    animate.setAttribute('to', '640');
-    animate.setAttribute('dur', '4s');
-    animate.setAttribute('repeatCount', 'indefinite');
-
-    const animate2 = document.createElementNS("http://www.w3.org/2000/svg", "animate");
-    animate2.setAttribute('attributeName', 'y2');
-    animate2.setAttribute('from', '-40');
-    animate2.setAttribute('to', '640');
-    animate2.setAttribute('dur', '4s');
-    animate2.setAttribute('repeatCount', 'indefinite');
-
-    scanLine.appendChild(animate);
-    scanLine.appendChild(animate2);
+    const anim = document.createElementNS("http://www.w3.org/2000/svg", "animate");
+    anim.setAttribute('attributeName', 'y1'); anim.setAttribute('from', '-40'); anim.setAttribute('to', '640');
+    anim.setAttribute('dur', '5s'); anim.setAttribute('repeatCount', 'indefinite');
+    const anim2 = anim.cloneNode();
+    anim2.setAttribute('attributeName', 'y2');
+    scanLine.appendChild(anim); scanLine.appendChild(anim2);
     svg.appendChild(scanLine);
 }
 
 function createNode(x, y, r, color, label, status = 'active', isMajor = false) {
     const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    group.setAttribute('class', 'cursor-pointer hover:filter hover:brightness-125 transition-all');
-
-    // Status ring for at-risk nodes
     if (status !== 'active') {
         const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        ring.setAttribute('cx', x);
-        ring.setAttribute('cy', y);
-        ring.setAttribute('r', r + 4);
-        ring.setAttribute('fill', 'none');
-        ring.setAttribute('stroke', status === 'critical' ? '#ef4444' : '#f59e0b');
+        ring.setAttribute('cx', x); ring.setAttribute('cy', y); ring.setAttribute('r', r + 4);
+        ring.setAttribute('fill', 'none'); ring.setAttribute('stroke', status === 'critical' ? '#ef4444' : '#f59e0b');
         ring.setAttribute('stroke-width', '2');
-
-        const animate = document.createElementNS("http://www.w3.org/2000/svg", "animate");
-        animate.setAttribute('attributeName', 'opacity');
-        animate.setAttribute('values', '0.2;1;0.2');
-        animate.setAttribute('dur', '1.5s');
-        animate.setAttribute('repeatCount', 'indefinite');
-        ring.appendChild(animate);
-
-        group.appendChild(ring);
+        const ra = document.createElementNS("http://www.w3.org/2000/svg", "animate");
+        ra.setAttribute('attributeName', 'opacity'); ra.setAttribute('values', '0.2;1;0.2');
+        ra.setAttribute('dur', '1.5s'); ra.setAttribute('repeatCount', 'indefinite');
+        ring.appendChild(ra); group.appendChild(ring);
     }
-
     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    circle.setAttribute('cx', x);
-    circle.setAttribute('cy', y);
-    circle.setAttribute('r', r);
+    circle.setAttribute('cx', x); circle.setAttribute('cy', y); circle.setAttribute('r', r);
     circle.setAttribute('fill', status === 'critical' ? '#ef4444' : color);
-
-    if (isMajor) {
-        circle.setAttribute('stroke', '#475569');
-        circle.setAttribute('stroke-width', '2');
-    }
-
     const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    text.setAttribute('x', x);
-    text.setAttribute('y', y + r + 15);
-    text.setAttribute('text-anchor', 'middle');
-    text.setAttribute('fill', isMajor ? '#cbd5e1' : '#94a3b8');
-    text.setAttribute('font-size', isMajor ? '10' : '8');
-    text.setAttribute('font-family', 'monospace');
+    text.setAttribute('x', x); text.setAttribute('y', y + r + 15);
+    text.setAttribute('text-anchor', 'middle'); text.setAttribute('fill', '#cbd5e1');
+    text.setAttribute('font-size', isMajor ? '9' : '7'); text.setAttribute('font-family', 'monospace');
     text.textContent = label;
-
-    group.appendChild(circle);
-    group.appendChild(text);
-
-    // Simple hover effect logic
-    group.addEventListener('mouseenter', () => {
-        circle.setAttribute('r', r * 1.3);
-    });
-    group.addEventListener('mouseleave', () => {
-        circle.setAttribute('r', r);
-    });
-
+    group.appendChild(circle); group.appendChild(text);
     return group;
 }
 
 function createLine(x1, y1, x2, y2) {
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-    line.setAttribute('x1', x1);
-    line.setAttribute('y1', y1);
-    line.setAttribute('x2', x2);
-    line.setAttribute('y2', y2);
-    line.setAttribute('stroke', '#334155');
-    line.setAttribute('stroke-width', '1');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('stroke', '#334155'); line.setAttribute('stroke-width', '1');
     line.setAttribute('stroke-dasharray', '4');
     return line;
 }
 
 function populateStats() {
-    const animateValue = (id, target) => {
+    ['statAssets', 'statNodes', 'statSoftware'].forEach(id => {
         const el = document.getElementById(id);
-        if (!el) return;
-        let current = 0;
-        const duration = 2000;
-        const stepTime = 30;
-        const steps = duration / stepTime;
-        const increment = target / steps;
-
-        const interval = setInterval(() => {
-            current += increment;
-            if (current >= target) {
-                el.textContent = target.toLocaleString();
-                clearInterval(interval);
-            } else {
-                el.textContent = Math.floor(current).toLocaleString();
-            }
-        }, stepTime);
-    };
-
-    animateValue('statAssets', INFRA_DATA.stats.assets);
-    animateValue('statNodes', INFRA_DATA.stats.nodes);
-    animateValue('statSoftware', INFRA_DATA.stats.software);
-    document.getElementById('statRisk').textContent = INFRA_DATA.stats.risk;
+        if (el) el.textContent = INFRA_DATA.stats[id.replace('stat', '').toLowerCase()].toLocaleString();
+    });
+    const riskEl = document.getElementById('statRisk');
+    if (riskEl) riskEl.textContent = INFRA_DATA.stats.risk;
 }
 
-function startSecurityLog() {
+function startSecurityLog(silent = false) {
     const logContainer = document.getElementById('securityLog');
     if (!logContainer) return;
     logContainer.innerHTML = '';
-
     INFRA_DATA.logs.forEach((log, i) => {
-        setTimeout(() => {
+        const add = () => {
             const entry = document.createElement('div');
-            const colorClass = log.type === 'critical' ? 'text-red-400' : (log.type === 'warning' ? 'text-amber-400' : (log.type === 'success' ? 'text-emerald-400' : 'text-slate-400'));
-            const prefix = log.type === 'critical' ? '[CRIT]' : (log.type === 'warning' ? '[WARN]' : '[INFO]');
-
+            const color = log.type === 'critical' ? 'text-red-400' : (log.type === 'warning' ? 'text-amber-400' : 'text-slate-400');
             entry.className = `border-l-2 pl-2 mb-2 ${log.type === 'critical' ? 'border-red-500' : 'border-slate-700'}`;
-            entry.innerHTML = `<span class="font-bold ${colorClass}">${prefix}</span> <span class="text-slate-300 text-[10px]">${log.msg}</span>`;
+            entry.innerHTML = `<span class="font-bold ${color}">[${log.type.toUpperCase()}]</span> <span class="text-slate-300 text-[10px]">${log.msg}</span>`;
             logContainer.prepend(entry);
-        }, i * 800);
+        };
+        if (silent) add(); else setTimeout(add, i * 800);
     });
 }
 
-// Initialize on load
+// Global initialization
 document.addEventListener('DOMContentLoaded', () => {
     initLandscapeModule();
 });
-
-// Re-init when navigating to landscape
-const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-        if (mutation.target.id === 'landscapePage' && mutation.target.classList.contains('active')) {
-            initLandscapeModule();
-        }
-    });
-});
-
-const lpElement = document.getElementById('landscapePage');
-if (lpElement) {
-    observer.observe(lpElement, { attributes: true, attributeFilter: ['class'] });
-}
