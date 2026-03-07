@@ -175,3 +175,276 @@ document.querySelectorAll('.portfolio-tab').forEach(tab => {
         }
     });
 });
+
+// --- Discovery & Sweep Module ---
+
+const INFRA_DATA = {
+    stats: {
+        assets: 14352,
+        nodes: 745,
+        software: 1891,
+        risk: "Elevated"
+    },
+    clusters: [
+        {
+            id: 'citizen',
+            label: 'Citizen Access & Identity',
+            color: '#10b981', // green-500
+            nodes: ['BankID Gateway', 'Web Portals', 'E-Services Hub', 'Open Data API', 'Citizen App Backend']
+        },
+        {
+            id: 'ops',
+            label: 'Municipal Operations',
+            color: '#f59e0b', // amber-500
+            nodes: ['Education LMS', 'Social Services Portal', 'Urban Planning GIS', 'Waste Management IoT', 'Park & Street Control']
+        },
+        {
+            id: 'admin',
+            label: 'Administrative Backbone',
+            color: '#3b82f6', // blue-500
+            nodes: ['ERP System (Unit4)', 'HR Management', 'Case Management', 'Financial Ledger', 'Records Archive']
+        },
+        {
+            id: 'tech',
+            label: 'Technical Base',
+            color: '#a855f7', // purple-500
+            nodes: ['Main Data Center', 'Fiber Backbone', 'IoT Mesh Network', 'Smart City Sensors', 'Cloud Hybrid Link']
+        }
+    ],
+    logs: [
+        { type: 'critical', msg: '3x Windows Server 2012 found (EOL) in Social Services V-LAN' },
+        { type: 'warning', msg: 'Unauthorized IoT Bridge detected: Subnet 10.42.12.0/24' },
+        { type: 'info', msg: 'Fiber Backbone throughput optimized (98.2% efficiency)' },
+        { type: 'critical', msg: 'Legacy SQL Instance (v2008) discovered in Finance Archive' },
+        { type: 'warning', msg: 'Certificate expiry in 14 days: citizen-portal-ext.se' },
+        { type: 'success', msg: 'BankID 4.0 Integration verified across all nodes' }
+    ]
+};
+
+function initLandscapeModule() {
+    const sweepBtn = document.getElementById('startSweepBtn');
+    const overlay = document.getElementById('sweepOverlay');
+    const progressBar = document.getElementById('sweepProgress');
+    const statusText = document.getElementById('sweepStatus');
+    const sweepLog = document.getElementById('sweepLog');
+    const container = document.getElementById('landscapeContainer');
+    const securityLog = document.getElementById('securityLog');
+
+    if (!sweepBtn || sweepBtn.dataset.initialized) return;
+    sweepBtn.dataset.initialized = "true";
+
+    sweepBtn.addEventListener('click', () => {
+        // Start Sweep Animation
+        overlay.classList.remove('hidden');
+        let progress = 0;
+        const messages = [
+            "Pinging Subnet 10.0.0.0/8...",
+            "Discovered 4 major clusters...",
+            "Mapping logical dependencies...",
+            "Validating software signatures...",
+            "Correlating asset IDs...",
+            "Finalizing topology export..."
+        ];
+
+        const interval = setInterval(() => {
+            progress += 1.5;
+            if (progress > 100) progress = 100;
+            progressBar.style.width = `${progress}%`;
+
+            const msgIndex = Math.floor((progress / 100) * (messages.length - 1));
+            if (messages[msgIndex]) {
+                statusText.textContent = messages[msgIndex];
+                sweepLog.textContent = `[UDP/TCP SCAN] ${Math.random().toString(16).slice(2, 10)}: Found node...`;
+            }
+
+            if (progress >= 100) {
+                clearInterval(interval);
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    container.classList.remove('opacity-40');
+                    renderTopology();
+                    populateStats();
+                    startSecurityLog();
+                }, 800);
+            }
+        }, 30);
+    });
+}
+
+function renderTopology() {
+    const svg = document.getElementById('topologySvg');
+    if (!svg) return;
+    svg.innerHTML = ''; // Clear previous
+
+    const width = 800;
+    const height = 600;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const clusterRadius = 180;
+
+    // Create central "Municipality Hub"
+    const hub = createNode(centerX, centerY, 40, '#1e293b', 'SMART CITY CORE', true);
+    svg.appendChild(hub);
+
+    INFRA_DATA.clusters.forEach((cluster, i) => {
+        const angle = (i / INFRA_DATA.clusters.length) * Math.PI * 2;
+        const cx = centerX + Math.cos(angle) * clusterRadius;
+        const cy = centerY + Math.sin(angle) * clusterRadius;
+
+        // Draw connection to hub
+        svg.appendChild(createLine(centerX, centerY, cx, cy));
+
+        // Draw Cluster Node
+        svg.appendChild(createNode(cx, cy, 30, cluster.color, cluster.label, true));
+
+        // Draw sub-nodes
+        cluster.nodes.forEach((nodeLabel, j) => {
+            const subAngle = angle - 0.5 + (j / cluster.nodes.length) * 1.0;
+            const sx = cx + Math.cos(subAngle) * 70;
+            const sy = cy + Math.sin(subAngle) * 70;
+
+            svg.appendChild(createLine(cx, cy, sx, sy));
+            svg.appendChild(createNode(sx, sy, 12, cluster.color, nodeLabel));
+        });
+    });
+
+    // Add scanning line animation to SVG
+    const scanLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    scanLine.setAttribute('x1', '0');
+    scanLine.setAttribute('y1', '0');
+    scanLine.setAttribute('x2', '800');
+    scanLine.setAttribute('y2', '0');
+    scanLine.setAttribute('stroke', 'rgba(20, 184, 166, 0.2)');
+    scanLine.setAttribute('stroke-width', '40');
+
+    const animate = document.createElementNS("http://www.w3.org/2000/svg", "animate");
+    animate.setAttribute('attributeName', 'y1');
+    animate.setAttribute('from', '-40');
+    animate.setAttribute('to', '640');
+    animate.setAttribute('dur', '4s');
+    animate.setAttribute('repeatCount', 'indefinite');
+
+    const animate2 = document.createElementNS("http://www.w3.org/2000/svg", "animate");
+    animate2.setAttribute('attributeName', 'y2');
+    animate2.setAttribute('from', '-40');
+    animate2.setAttribute('to', '640');
+    animate2.setAttribute('dur', '4s');
+    animate2.setAttribute('repeatCount', 'indefinite');
+
+    scanLine.appendChild(animate);
+    scanLine.appendChild(animate2);
+    svg.appendChild(scanLine);
+}
+
+function createNode(x, y, r, color, label, isMajor = false) {
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.setAttribute('class', 'cursor-pointer hover:filter hover:brightness-125 transition-all');
+
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute('cx', x);
+    circle.setAttribute('cy', y);
+    circle.setAttribute('r', r);
+    circle.setAttribute('fill', color);
+    if (isMajor) {
+        circle.setAttribute('stroke', '#475569');
+        circle.setAttribute('stroke-width', '2');
+    }
+
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    text.setAttribute('x', x);
+    text.setAttribute('y', y + r + 15);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('fill', isMajor ? '#cbd5e1' : '#94a3b8');
+    text.setAttribute('font-size', isMajor ? '10' : '8');
+    text.setAttribute('font-family', 'monospace');
+    text.textContent = label;
+
+    group.appendChild(circle);
+    group.appendChild(text);
+
+    // Simple hover effect logic
+    group.addEventListener('mouseenter', () => {
+        circle.setAttribute('r', r * 1.3);
+    });
+    group.addEventListener('mouseleave', () => {
+        circle.setAttribute('r', r);
+    });
+
+    return group;
+}
+
+function createLine(x1, y1, x2, y2) {
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute('x1', x1);
+    line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2);
+    line.setAttribute('y2', y2);
+    line.setAttribute('stroke', '#334155');
+    line.setAttribute('stroke-width', '1');
+    line.setAttribute('stroke-dasharray', '4');
+    return line;
+}
+
+function populateStats() {
+    const animateValue = (id, target) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        let current = 0;
+        const duration = 2000;
+        const stepTime = 30;
+        const steps = duration / stepTime;
+        const increment = target / steps;
+
+        const interval = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                el.textContent = target.toLocaleString();
+                clearInterval(interval);
+            } else {
+                el.textContent = Math.floor(current).toLocaleString();
+            }
+        }, stepTime);
+    };
+
+    animateValue('statAssets', INFRA_DATA.stats.assets);
+    animateValue('statNodes', INFRA_DATA.stats.nodes);
+    animateValue('statSoftware', INFRA_DATA.stats.software);
+    document.getElementById('statRisk').textContent = INFRA_DATA.stats.risk;
+}
+
+function startSecurityLog() {
+    const logContainer = document.getElementById('securityLog');
+    if (!logContainer) return;
+    logContainer.innerHTML = '';
+
+    INFRA_DATA.logs.forEach((log, i) => {
+        setTimeout(() => {
+            const entry = document.createElement('div');
+            const colorClass = log.type === 'critical' ? 'text-red-400' : (log.type === 'warning' ? 'text-amber-400' : (log.type === 'success' ? 'text-emerald-400' : 'text-slate-400'));
+            const prefix = log.type === 'critical' ? '[CRIT]' : (log.type === 'warning' ? '[WARN]' : '[INFO]');
+
+            entry.className = `border-l-2 pl-2 mb-2 ${log.type === 'critical' ? 'border-red-500' : 'border-slate-700'}`;
+            entry.innerHTML = `<span class="font-bold ${colorClass}">${prefix}</span> <span class="text-slate-300 text-[10px]">${log.msg}</span>`;
+            logContainer.prepend(entry);
+        }, i * 800);
+    });
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+    initLandscapeModule();
+});
+
+// Re-init when navigating to landscape
+const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        if (mutation.target.id === 'landscapePage' && mutation.target.classList.contains('active')) {
+            initLandscapeModule();
+        }
+    });
+});
+
+const lpElement = document.getElementById('landscapePage');
+if (lpElement) {
+    observer.observe(lpElement, { attributes: true, attributeFilter: ['class'] });
+}
