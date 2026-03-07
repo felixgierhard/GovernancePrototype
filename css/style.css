@@ -57,7 +57,6 @@ body {
 
 /* Login Page */
 .login-container {
-    display: none;
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -190,7 +189,7 @@ body {
 
 /* Dashboard Layout */
 .dashboard {
-    display: flex;
+    display: none;
     min-height: 100vh;
 }
 

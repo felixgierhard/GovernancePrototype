@@ -3,7 +3,7 @@
  * Core Dashboard Logic
  */
 
-// --- Mock User Data & Dashboard Content (Remain same as previous) ---
+// --- Mock User Data ---
 const USERS = [
     { email: "elena.andersson@eskilstuna.se", password: "demo1234", name: "Elena Andersson", title: "Chief Digital Officer", initials: "EA", roleKey: "cdo" },
     { email: "arthur.bergstrom@eskilstuna.se", password: "demo1234", name: "Arthur Bergstr\u00f6m", title: "Operations Lead", initials: "AB", roleKey: "operations" },
@@ -88,33 +88,102 @@ let isDragging = false;
 let startPos = { x: 0, y: 0 };
 
 /**
+ * Login handler
+ */
+function handleLogin(e) {
+    e.preventDefault();
+    const usernameInput = document.getElementById('usernameInput').value.trim();
+    const passwordInput = document.getElementById('passwordInput').value;
+    const errorMsg = document.getElementById('loginError');
+
+    let email = usernameInput;
+    if (!email.includes("@")) email = email + "@eskilstuna.se";
+
+    const user = USERS.find(u => u.email === email && u.password === passwordInput);
+
+    if (user) {
+        errorMsg.style.display = 'none';
+        document.getElementById('userRole').textContent = user.title;
+        document.getElementById('userAvatar').textContent = user.initials;
+
+        // Inject Role Content
+        if (DASHBOARD_CONTENT[user.roleKey]) {
+            const content = DASHBOARD_CONTENT[user.roleKey];
+            const homePage = document.getElementById('homePage');
+            if (homePage) {
+                const h = homePage.querySelector('.page-header'); if (h) h.innerHTML = content.header;
+                const k = homePage.querySelector('.kpi-grid'); if (k) k.innerHTML = content.kpis;
+                const w = homePage.querySelector('.widget-grid'); if (w) w.innerHTML = content.widgets;
+            }
+        }
+
+        // Switch to Dashboard
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'flex';
+        document.getElementById('dashboard').classList.add('active');
+
+        // Default to Home on login
+        switchPage('home');
+    } else {
+        errorMsg.textContent = "Invalid username or password.";
+        errorMsg.style.display = 'block';
+    }
+}
+
+/**
+ * Logout handler
+ */
+function handleLogout() {
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('dashboard').classList.remove('active');
+    document.getElementById('loginPage').style.display = 'flex';
+}
+
+/**
+ * Page switching logic
+ */
+function switchPage(pageId) {
+    // Update Nav
+    document.querySelectorAll('.nav-item').forEach(nav => {
+        nav.classList.toggle('active', nav.dataset.page === pageId);
+    });
+
+    // Update Sections
+    document.querySelectorAll('.page-section').forEach(section => {
+        section.classList.toggle('active', section.id === (pageId + 'Page'));
+    });
+
+    // Init specific modules
+    if (pageId === 'landscape') {
+        setTimeout(initLandscapeModule, 50);
+    }
+}
+
+/**
  * Initialize the discovery landscape module
  */
 function initLandscapeModule() {
     const sweepBtn = document.getElementById('startSweepBtn');
-    const svg = document.getElementById('topologySvg');
+    const svg = document.getElementByIdNS("http://www.w3.org/2000/svg", "svg") || document.getElementById('topologySvg');
+
     if (!svg || !sweepBtn || sweepBtn.dataset.initialized) {
-        if (svg) setupInteractivity(svg); // Still setup zoom if already rendered
+        if (svg) setupInteractivity(svg);
         return;
     }
     sweepBtn.dataset.initialized = "true";
 
-    // Initial populate
     renderTopology();
     populateStats();
     startSecurityLog(true);
-
-    // Setup map interactions
     setupInteractivity(svg);
 
-    // Sweep Button Logic
     sweepBtn.addEventListener('click', () => {
         const overlay = document.getElementById('sweepOverlay');
         const progressBar = document.getElementById('sweepProgress');
         overlay.classList.remove('hidden');
         let progress = 0;
         const interval = setInterval(() => {
-            progress += 3;
+            progress += 4;
             if (progress > 100) progress = 100;
             progressBar.style.width = `${progress}%`;
             if (progress >= 100) {
@@ -123,56 +192,53 @@ function initLandscapeModule() {
                     overlay.classList.add('hidden');
                     document.getElementById('landscapeContainer').classList.remove('opacity-40');
                     renderTopology(); populateStats(); startSecurityLog(false);
-                }, 400);
+                }, 300);
             }
         }, 30);
     });
 
-    // Close Details
     const closeBtn = document.getElementById('closeDetails');
     if (closeBtn) closeBtn.addEventListener('click', hideDetails);
 }
 
 function setupInteractivity(svg) {
-    // Zoom Buttons
-    document.getElementById('zoomInBtn').addEventListener('click', (e) => { e.stopPropagation(); zoom(1.2); });
-    document.getElementById('zoomOutBtn').addEventListener('click', (e) => { e.stopPropagation(); zoom(0.8); });
-    document.getElementById('resetZoomBtn').addEventListener('click', (e) => { e.stopPropagation(); resetMap(); });
+    if (svg.dataset.interactivitySet) return;
+    svg.dataset.interactivitySet = "true";
 
-    // Drag Logic
-    svg.addEventListener('mousedown', (e) => {
-        if (e.button !== 0) return; // Left click only
+    document.getElementById('zoomInBtn').onclick = (e) => { e.stopPropagation(); zoom(1.2); };
+    document.getElementById('zoomOutBtn').onclick = (e) => { e.stopPropagation(); zoom(0.8); };
+    document.getElementById('resetZoomBtn').onclick = (e) => { e.stopPropagation(); resetMap(); };
+
+    svg.onmousedown = (e) => {
+        if (e.button !== 0) return;
         isDragging = true;
         svg.style.cursor = 'grabbing';
         startPos = { x: e.clientX - mapTransform.x, y: e.clientY - mapTransform.y };
         e.preventDefault();
-    });
+    };
 
-    window.addEventListener('mousemove', (e) => {
+    window.onmousemove = (e) => {
         if (!isDragging) return;
         mapTransform.x = e.clientX - startPos.x;
         mapTransform.y = e.clientY - startPos.y;
         updateTransform();
-    });
+    };
 
-    window.addEventListener('mouseup', () => {
+    window.onmouseup = () => {
         isDragging = false;
         svg.style.cursor = 'grab';
-    });
+    };
 
-    // Wheel Zoom
-    svg.addEventListener('wheel', (e) => {
+    svg.onwheel = (e) => {
         e.preventDefault();
         const delta = e.deltaY > 0 ? 0.9 : 1.1;
         zoom(delta, e.clientX, e.clientY);
-    }, { passive: false });
+    };
 }
 
 function zoom(factor, centerX, centerY) {
     const svg = document.getElementById('topologySvg');
     const rect = svg.getBoundingClientRect();
-
-    // Zoom around mouse if provided, else center of SVG
     const cx = centerX ? centerX - rect.left : rect.width / 2;
     const cy = centerY ? centerY - rect.top : rect.height / 2;
 
@@ -182,7 +248,6 @@ function zoom(factor, centerX, centerY) {
     mapTransform.x = cx - (cx - mapTransform.x) * actualFactor;
     mapTransform.y = cy - (cy - mapTransform.y) * actualFactor;
     mapTransform.scale = newScale;
-
     updateTransform();
 }
 
@@ -202,7 +267,6 @@ function renderTopology() {
     const svg = document.getElementById('topologySvg');
     if (!svg) return;
 
-    // Ensure viewport group exists
     let viewport = document.getElementById('mapViewport');
     if (!viewport) {
         viewport = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -213,7 +277,6 @@ function renderTopology() {
 
     const centerX = 400, centerY = 300, clusterRadius = 180;
 
-    // Center Hub
     const core = createNode(centerX, centerY, 45, '#1e293b', 'SMART CORE', 'active', true);
     core.onclick = () => showDetails('Municipal Hub', 'Core Orchestration', 'Central node connecting all departments.', 'active', 'CORE-X', 'IMS Admin', '99.9%');
     viewport.appendChild(core);
@@ -222,7 +285,6 @@ function renderTopology() {
         const angle = (i / INFRA_DATA.clusters.length) * Math.PI * 2;
         const cx = centerX + Math.cos(angle) * clusterRadius;
         const cy = centerY + Math.sin(angle) * clusterRadius;
-
         viewport.appendChild(createLine(centerX, centerY, cx, cy));
 
         const clusterNode = createNode(cx, cy, 32, c.color, c.label, 'active', true);
@@ -234,19 +296,17 @@ function renderTopology() {
             const sx = cx + Math.cos(subAngle) * 90;
             const sy = cy + Math.sin(subAngle) * 90;
             viewport.appendChild(createLine(cx, cy, sx, sy));
-
             const node = createNode(sx, sy, 14, c.color, n.label, n.status);
             node.onclick = () => showDetails(n.label, n.type, `Version: ${n.v} | ${n.alert || 'Healthy'}`, n.status, `ID-${Math.random().toString(36).substr(2, 5).toUpperCase()}`, c.lead, '99%');
             viewport.appendChild(node);
         });
     });
-
     updateTransform();
 }
 
 function createNode(x, y, r, color, label, status = 'active', isMajor = false) {
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    g.setAttribute('class', 'cursor-pointer hover:filter hover:drop-shadow-[0_0_8px_rgba(20,184,166,0.6)] transition-all');
+    g.style.cursor = 'pointer';
 
     if (status !== 'active') {
         const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
@@ -256,25 +316,18 @@ function createNode(x, y, r, color, label, status = 'active', isMajor = false) {
         const anim = document.createElementNS("http://www.w3.org/2000/svg", "animate");
         anim.setAttribute('attributeName', 'r'); anim.setAttribute('values', `${r + 4};${r + 10};${r + 4}`);
         anim.setAttribute('dur', '2s'); anim.setAttribute('repeatCount', 'indefinite');
-        ring.appendChild(anim);
-        const op = anim.cloneNode(); op.setAttribute('attributeName', 'opacity'); op.setAttribute('values', '1;0.2;1'); ring.appendChild(op);
-        g.appendChild(ring);
+        ring.appendChild(anim); g.appendChild(ring);
     }
 
     const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', r);
     c.setAttribute('fill', status === 'critical' ? '#ef4444' : color);
 
-    if (isMajor) {
-        c.setAttribute('stroke', 'white'); c.setAttribute('stroke-width', '1'); c.setAttribute('stroke-opacity', '0.2');
-    }
-
     const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
     t.setAttribute('x', x); t.setAttribute('y', y + r + 18);
     t.setAttribute('text-anchor', 'middle'); t.setAttribute('fill', '#94a3b8');
     t.setAttribute('font-size', isMajor ? '10' : '8'); t.setAttribute('font-family', 'monospace');
     t.textContent = label;
-
     g.appendChild(c); g.appendChild(t);
     return g;
 }
@@ -292,7 +345,6 @@ function showDetails(title, type, desc, status, id, owner, uptime) {
     const s = document.getElementById('detailStatus');
     s.textContent = `STATUS: ${status.toUpperCase()}`;
     s.className = `px-2 py-0.5 rounded text-[10px] font-bold ${status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : (status === 'warning' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400')}`;
-
     document.getElementById('detailContent').innerHTML = `
         <div class="space-y-4">
             <div class="bg-slate-800/80 p-3 rounded border border-slate-700">
@@ -300,19 +352,8 @@ function showDetails(title, type, desc, status, id, owner, uptime) {
                 <p class="text-white text-sm font-semibold">${type}</p>
             </div>
             <p class="text-slate-400 text-xs leading-relaxed">${desc}</p>
-            <div class="grid grid-cols-2 gap-2 text-[11px]">
-                <div class="bg-slate-800/40 p-2 rounded">
-                    <p class="text-slate-500 uppercase font-bold text-[8px]">Asset ID</p>
-                    <p class="text-white font-mono">${id}</p>
-                </div>
-                <div class="bg-slate-800/40 p-2 rounded">
-                    <p class="text-slate-500 uppercase font-bold text-[8px]">Compliance</p>
-                    <p class="text-white">Active</p>
-                </div>
-            </div>
         </div>
     `;
-
     p.classList.remove('hidden');
     setTimeout(() => { p.style.opacity = '1'; p.style.transform = 'translateX(0)'; }, 50);
 }
@@ -336,29 +377,25 @@ function startSecurityLog(silent) {
     INFRA_DATA.logs.forEach((item, i) => {
         const add = () => {
             const d = document.createElement('div');
-            const c = item.type === 'critical' ? 'text-red-400' : (item.type === 'warning' ? 'text-amber-400' : 'text-teal-400');
             d.className = `border-l-2 pl-2 mb-2 ${item.type === 'critical' ? 'border-red-500' : 'border-slate-800'}`;
-            d.innerHTML = `<span class="font-bold ${c} tracking-tighter">[${item.type.toUpperCase()}]</span> <span class="text-slate-400 text-[10px] leading-tight">${item.msg}</span>`;
+            d.innerHTML = `<span class="font-bold text-[9px] uppercase tracking-tighter">[${item.type}]</span> <span class="text-slate-400 text-[10px]">${item.msg}</span>`;
             log.prepend(d);
         };
-        if (silent) add(); else setTimeout(add, i * 500);
+        if (silent) add(); else setTimeout(add, i * 400);
     });
 }
 
-// Event Listeners
+// Global Init
 document.addEventListener('DOMContentLoaded', () => {
-    initLandscapeModule();
-
-    // Auth Logic (Keep for demo consistency)
+    // Auth Listeners
     const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-        // ... (Already handled above but keeping skeleton for listener initialization)
-    }
-});
+    if (loginForm) loginForm.addEventListener('submit', handleLogin);
 
-// Navigation Handling
-document.querySelectorAll('.nav-item').forEach(nav => {
-    nav.addEventListener('click', () => {
-        if (nav.dataset.page === 'landscape') setTimeout(initLandscapeModule, 100);
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+
+    // Nav Listeners
+    document.querySelectorAll('.nav-item').forEach(nav => {
+        nav.addEventListener('click', () => switchPage(nav.dataset.page));
     });
 });
