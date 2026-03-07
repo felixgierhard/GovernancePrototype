@@ -1,6 +1,6 @@
 /**
  * IMS - Intelligent Municipal Infrastructure Management
- * Core Dashboard Logic
+ * Core Dashboard Logic with persistent session simulation
  */
 
 // --- Mock User Data ---
@@ -88,7 +88,7 @@ let isDragging = false;
 let startPos = { x: 0, y: 0 };
 
 /**
- * Login handler
+ * Login handler with simulation of page reload
  */
 function handleLogin(e) {
     e.preventDefault();
@@ -103,27 +103,12 @@ function handleLogin(e) {
 
     if (user) {
         errorMsg.style.display = 'none';
-        document.getElementById('userRole').textContent = user.title;
-        document.getElementById('userAvatar').textContent = user.initials;
+        // 1. Persist the session
+        sessionStorage.setItem('ims_session_active', 'true');
+        sessionStorage.setItem('ims_user', JSON.stringify(user));
 
-        // Inject Role Content
-        if (DASHBOARD_CONTENT[user.roleKey]) {
-            const content = DASHBOARD_CONTENT[user.roleKey];
-            const homePage = document.getElementById('homePage');
-            if (homePage) {
-                const h = homePage.querySelector('.page-header'); if (h) h.innerHTML = content.header;
-                const k = homePage.querySelector('.kpi-grid'); if (k) k.innerHTML = content.kpis;
-                const w = homePage.querySelector('.widget-grid'); if (w) w.innerHTML = content.widgets;
-            }
-        }
-
-        // Switch to Dashboard
-        document.getElementById('loginPage').style.display = 'none';
-        document.getElementById('dashboard').style.display = 'flex';
-        document.getElementById('dashboard').classList.add('active');
-
-        // Default to Home on login
-        switchPage('home');
+        // 2. Perform a full page reload to simulate authentic transition
+        window.location.reload();
     } else {
         errorMsg.textContent = "Invalid username or password.";
         errorMsg.style.display = 'block';
@@ -131,40 +116,66 @@ function handleLogin(e) {
 }
 
 /**
- * Logout handler
+ * Logout handler with simulation of page reload
  */
 function handleLogout() {
-    document.getElementById('dashboard').style.display = 'none';
-    document.getElementById('dashboard').classList.remove('active');
-    document.getElementById('loginPage').style.display = 'flex';
+    sessionStorage.removeItem('ims_session_active');
+    sessionStorage.removeItem('ims_user');
+    window.location.reload();
 }
 
 /**
- * Page switching logic
+ * Apply user-specific data to the UI after reload
+ */
+function applyUserSession() {
+    const savedUser = sessionStorage.getItem('ims_user');
+    if (!savedUser) return;
+
+    const user = JSON.parse(savedUser);
+
+    // Update Profile Info
+    document.getElementById('userRole').textContent = user.title;
+    document.getElementById('userAvatar').textContent = user.initials;
+
+    // Inject Role Content
+    if (DASHBOARD_CONTENT[user.roleKey]) {
+        const content = DASHBOARD_CONTENT[user.roleKey];
+        const homePage = document.getElementById('homePage');
+        if (homePage) {
+            const h = homePage.querySelector('.page-header'); if (h) h.innerHTML = content.header;
+            const k = homePage.querySelector('.kpi-grid'); if (k) k.innerHTML = content.kpis;
+            const w = homePage.querySelector('.widget-grid'); if (w) w.innerHTML = content.widgets;
+        }
+    }
+
+    // Hide Login, Show Dashboard
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'flex';
+    document.getElementById('dashboard').classList.add('active');
+}
+
+/**
+ * Page switching logic (SPA Navigation)
  */
 function switchPage(pageId) {
-    // Update Nav
     document.querySelectorAll('.nav-item').forEach(nav => {
         nav.classList.toggle('active', nav.dataset.page === pageId);
     });
 
-    // Update Sections
     document.querySelectorAll('.page-section').forEach(section => {
         section.classList.toggle('active', section.id === (pageId + 'Page'));
     });
 
-    // Init specific modules
     if (pageId === 'landscape') {
         setTimeout(initLandscapeModule, 50);
     }
 }
 
-/**
- * Initialize the discovery landscape module
- */
+// --- Discovery & Sweep Logic (unchanged from previous high-interactivity version) ---
+
 function initLandscapeModule() {
     const sweepBtn = document.getElementById('startSweepBtn');
-    const svg = document.getElementByIdNS("http://www.w3.org/2000/svg", "svg") || document.getElementById('topologySvg');
+    const svg = document.getElementById('topologySvg');
 
     if (!svg || !sweepBtn || sweepBtn.dataset.initialized) {
         if (svg) setupInteractivity(svg);
@@ -385,16 +396,37 @@ function startSecurityLog(silent) {
     });
 }
 
-// Global Init
+// --- Lifecycle & Initialization ---
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Auth Listeners
+    // 1. Check if we have an active session
+    if (sessionStorage.getItem('ims_session_active') === 'true') {
+        applyUserSession();
+    } else {
+        // Ensure we are showing login if no session
+        document.getElementById('loginPage').style.display = 'flex';
+        document.getElementById('dashboard').style.display = 'none';
+        document.getElementById('dashboard').classList.remove('active');
+    }
+
+    // 2. Auth Listeners
     const loginForm = document.getElementById('loginForm');
     if (loginForm) loginForm.addEventListener('submit', handleLogin);
+
+    // Explicitly handle persona-card clicks as they should subit the form or trigger handleLogin
+    document.querySelectorAll('.persona-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const email = card.querySelector('h4').textContent + "@eskilstuna.se";
+            document.getElementById('usernameInput').value = email;
+            document.getElementById('passwordInput').value = "demo1234";
+            document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+        });
+    });
 
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
 
-    // Nav Listeners
+    // 3. Nav Listeners
     document.querySelectorAll('.nav-item').forEach(nav => {
         nav.addEventListener('click', () => switchPage(nav.dataset.page));
     });
