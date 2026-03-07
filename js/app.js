@@ -88,39 +88,49 @@ let isDragging = false;
 let startPos = { x: 0, y: 0 };
 
 /**
- * Login handler with simulation of page reload
+ * Handle Login manually (called by form or click)
  */
-function handleLogin(e) {
-    e.preventDefault();
-    const usernameInput = document.getElementById('usernameInput').value.trim();
-    const passwordInput = document.getElementById('passwordInput').value;
+function attemptLogin(email, password) {
     const errorMsg = document.getElementById('loginError');
+    if (errorMsg) errorMsg.style.display = 'none';
 
-    let email = usernameInput;
-    if (!email.includes("@")) email = email + "@eskilstuna.se";
+    let normalizedEmail = email.trim();
+    if (!normalizedEmail.includes("@")) normalizedEmail += "@eskilstuna.se";
 
-    const user = USERS.find(u => u.email === email && u.password === passwordInput);
+    const user = USERS.find(u => u.email === normalizedEmail && u.password === password);
 
     if (user) {
-        errorMsg.style.display = 'none';
-        // 1. Persist the session
+        // Persist session
         sessionStorage.setItem('ims_session_active', 'true');
         sessionStorage.setItem('ims_user', JSON.stringify(user));
 
-        // 2. Perform a full page reload to simulate authentic transition
-        window.location.reload();
+        // Use timeout to ensure storage is committed before reload
+        setTimeout(() => {
+            window.location.reload();
+        }, 50);
     } else {
-        errorMsg.textContent = "Invalid username or password.";
-        errorMsg.style.display = 'block';
+        if (errorMsg) {
+            errorMsg.textContent = "Invalid username or password.";
+            errorMsg.style.display = 'block';
+        }
     }
 }
 
 /**
- * Logout handler with simulation of page reload
+ * Handle form submission
+ */
+function handleLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('usernameInput').value;
+    const pass = document.getElementById('passwordInput').value;
+    attemptLogin(email, pass);
+}
+
+/**
+ * Logout handler
  */
 function handleLogout() {
-    sessionStorage.removeItem('ims_session_active');
-    sessionStorage.removeItem('ims_user');
+    sessionStorage.clear();
     window.location.reload();
 }
 
@@ -131,31 +141,46 @@ function applyUserSession() {
     const savedUser = sessionStorage.getItem('ims_user');
     if (!savedUser) return;
 
-    const user = JSON.parse(savedUser);
+    try {
+        const user = JSON.parse(savedUser);
 
-    // Update Profile Info
-    document.getElementById('userRole').textContent = user.title;
-    document.getElementById('userAvatar').textContent = user.initials;
+        // Update Profile Info
+        const userRoleEl = document.getElementById('userRole');
+        const userAvatarEl = document.getElementById('userAvatar');
 
-    // Inject Role Content
-    if (DASHBOARD_CONTENT[user.roleKey]) {
-        const content = DASHBOARD_CONTENT[user.roleKey];
-        const homePage = document.getElementById('homePage');
-        if (homePage) {
-            const h = homePage.querySelector('.page-header'); if (h) h.innerHTML = content.header;
-            const k = homePage.querySelector('.kpi-grid'); if (k) k.innerHTML = content.kpis;
-            const w = homePage.querySelector('.widget-grid'); if (w) w.innerHTML = content.widgets;
+        if (userRoleEl) userRoleEl.textContent = user.title;
+        if (userAvatarEl) userAvatarEl.textContent = user.initials;
+
+        // Inject Role Content
+        if (DASHBOARD_CONTENT[user.roleKey]) {
+            const content = DASHBOARD_CONTENT[user.roleKey];
+            const homePage = document.getElementById('homePage');
+            if (homePage) {
+                const h = homePage.querySelector('.page-header'); if (h) h.innerHTML = content.header;
+                const k = homePage.querySelector('.kpi-grid'); if (k) k.innerHTML = content.kpis;
+                const w = homePage.querySelector('.widget-grid'); if (w) w.innerHTML = content.widgets;
+            }
         }
-    }
 
-    // Hide Login, Show Dashboard
-    document.getElementById('loginPage').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'flex';
-    document.getElementById('dashboard').classList.add('active');
+        // --- CRITICAL VISIBILITY LOGIC ---
+        // Force switch to dashboard view
+        const loginPage = document.getElementById('loginPage');
+        const dashboard = document.getElementById('dashboard');
+
+        if (loginPage) loginPage.style.setProperty('display', 'none', 'important');
+        if (dashboard) {
+            dashboard.style.setProperty('display', 'flex', 'important');
+            dashboard.classList.add('active');
+        }
+
+    } catch (e) {
+        console.error("Session restore failed", e);
+        sessionStorage.clear();
+    }
 }
 
 /**
- * Page switching logic (SPA Navigation)
+ * Page switching logic
  */
 function switchPage(pageId) {
     document.querySelectorAll('.nav-item').forEach(nav => {
@@ -171,7 +196,7 @@ function switchPage(pageId) {
     }
 }
 
-// --- Discovery & Sweep Logic (unchanged from previous high-interactivity version) ---
+// --- Discovery & Sweep Logic ---
 
 function initLandscapeModule() {
     const sweepBtn = document.getElementById('startSweepBtn');
@@ -194,7 +219,7 @@ function initLandscapeModule() {
         overlay.classList.remove('hidden');
         let progress = 0;
         const interval = setInterval(() => {
-            progress += 4;
+            progress += 5;
             if (progress > 100) progress = 100;
             progressBar.style.width = `${progress}%`;
             if (progress >= 100) {
@@ -216,9 +241,13 @@ function setupInteractivity(svg) {
     if (svg.dataset.interactivitySet) return;
     svg.dataset.interactivitySet = "true";
 
-    document.getElementById('zoomInBtn').onclick = (e) => { e.stopPropagation(); zoom(1.2); };
-    document.getElementById('zoomOutBtn').onclick = (e) => { e.stopPropagation(); zoom(0.8); };
-    document.getElementById('resetZoomBtn').onclick = (e) => { e.stopPropagation(); resetMap(); };
+    const zoomIn = document.getElementById('zoomInBtn');
+    const zoomOut = document.getElementById('zoomOutBtn');
+    const reset = document.getElementById('resetZoomBtn');
+
+    if (zoomIn) zoomIn.onclick = (e) => { e.stopPropagation(); zoom(1.2); };
+    if (zoomOut) zoomOut.onclick = (e) => { e.stopPropagation(); zoom(0.8); };
+    if (reset) reset.onclick = (e) => { e.stopPropagation(); resetMap(); };
 
     svg.onmousedown = (e) => {
         if (e.button !== 0) return;
@@ -249,6 +278,7 @@ function setupInteractivity(svg) {
 
 function zoom(factor, centerX, centerY) {
     const svg = document.getElementById('topologySvg');
+    if (!svg) return;
     const rect = svg.getBoundingClientRect();
     const cx = centerX ? centerX - rect.left : rect.width / 2;
     const cy = centerY ? centerY - rect.top : rect.height / 2;
@@ -352,6 +382,7 @@ function createLine(x1, y1, x2, y2) {
 
 function showDetails(title, type, desc, status, id, owner, uptime) {
     const p = document.getElementById('nodeDetails');
+    if (!p) return;
     document.getElementById('detailTitle').textContent = title;
     const s = document.getElementById('detailStatus');
     s.textContent = `STATUS: ${status.toUpperCase()}`;
@@ -371,6 +402,7 @@ function showDetails(title, type, desc, status, id, owner, uptime) {
 
 function hideDetails() {
     const p = document.getElementById('nodeDetails');
+    if (!p) return;
     p.style.opacity = '0'; p.style.transform = 'translateX(1rem)';
     setTimeout(() => p.classList.add('hidden'), 300);
 }
@@ -396,37 +428,33 @@ function startSecurityLog(silent) {
     });
 }
 
-// --- Lifecycle & Initialization ---
+// --- Global Lifecycle ---
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Check if we have an active session
+    // Session Detection
     if (sessionStorage.getItem('ims_session_active') === 'true') {
         applyUserSession();
     } else {
-        // Ensure we are showing login if no session
-        document.getElementById('loginPage').style.display = 'flex';
-        document.getElementById('dashboard').style.display = 'none';
-        document.getElementById('dashboard').classList.remove('active');
+        const lp = document.getElementById('loginPage');
+        const db = document.getElementById('dashboard');
+        if (lp) lp.style.display = 'flex';
+        if (db) db.style.display = 'none';
     }
 
-    // 2. Auth Listeners
+    // Attach Listeners
     const loginForm = document.getElementById('loginForm');
     if (loginForm) loginForm.addEventListener('submit', handleLogin);
 
-    // Explicitly handle persona-card clicks as they should subit the form or trigger handleLogin
     document.querySelectorAll('.persona-card').forEach(card => {
         card.addEventListener('click', () => {
-            const email = card.querySelector('h4').textContent + "@eskilstuna.se";
-            document.getElementById('usernameInput').value = email;
-            document.getElementById('passwordInput').value = "demo1234";
-            document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+            const heading = card.querySelector('h4');
+            if (heading) attemptLogin(heading.textContent, "demo1234");
         });
     });
 
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
 
-    // 3. Nav Listeners
     document.querySelectorAll('.nav-item').forEach(nav => {
         nav.addEventListener('click', () => switchPage(nav.dataset.page));
     });
