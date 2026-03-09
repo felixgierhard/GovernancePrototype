@@ -78,6 +78,7 @@
                 <li class="nav-item" data-page="compliance"><span class="icon">🔒</span><span>Compliance</span></li>
                 <li class="nav-item" data-page="governance"><span class="icon">🏛️</span><span>Governance Hub</span>
                 </li>
+                <li class="nav-item" data-page="api-library"><span class="icon">📚</span><span>API library</span></li>
                 <li class="nav-item" data-page="library"><span class="icon">🔗</span><span>Shared Library</span></li>
                 <li class="nav-item" data-page="value"><span class="icon">📊</span><span>Public Value</span></li>
             </ul>
@@ -359,6 +360,44 @@
                             </div>
                         </div>
                 </section>
+
+                <!-- API Library -->
+                <section class="page-section" id="api-libraryPage">
+                    <div class="page-header items-center">
+                        <div>
+                            <h1 class="text-3xl font-bold text-slate-800">API Library</h1>
+                            <p class="text-slate-500 text-sm">Centralized registry of all municipal API interfaces and
+                                consumer contracts</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-12 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-200">
+                                        <th
+                                            class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                            API Name & Endpoint</th>
+                                        <th
+                                            class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                            Type</th>
+                                        <th
+                                            class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                            Connected Service</th>
+                                        <th
+                                            class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                            Active Consumers (Municipalities)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="apiTableBody" class="divide-y divide-slate-100">
+                                    <!-- Dynamic API rows will be injected here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Other sections will be added here -->
             </div>
         </main>

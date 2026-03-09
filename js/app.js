@@ -87,6 +87,18 @@ const INFRA_DATA = {
     ]
 };
 
+// --- API Library Data ---
+const API_LIBRARY_DATA = [
+    { name: "BankID v4.2", type: "Public", endpoint: "/api/v4/auth/bankid", service: "Citizen Access Hub", municipalities: ["Eskilstuna", "Göteborg", "Malmö", "Stockholm"] },
+    { name: "Resident Portal API", type: "Public", endpoint: "/api/v1/portal", service: "E-Services Central", municipalities: ["Eskilstuna", "Västerås"] },
+    { name: "Unit4 Connect", type: "Internal", endpoint: "/api/v7/erp", service: "Admin Backbone", municipalities: ["Eskilstuna"] },
+    { name: "Traffic IoT Stream", type: "Internal", endpoint: "/api/v1/iot/traffic", service: "Municipal Operations", municipalities: ["Eskilstuna", "Stockholm"] },
+    { name: "Partner Bridge", type: "Partner", endpoint: "/api/v1/ext/bridge", service: "Regional Transport", municipalities: ["Region Sörmland", "Eskilstuna"] },
+    { name: "Finance Gateway", type: "Internal", endpoint: "/api/v1/finance/db", service: "Finance Archive", municipalities: ["Eskilstuna"] },
+    { name: "School LMS Sync", type: "Internal", endpoint: "/api/v3/edu/lms", service: "Education Services", municipalities: ["Eskilstuna", "Uppsala", "Örebro"] },
+    { name: "GIS Spatial API", type: "Partner", endpoint: "/api/v2/stats/geo", service: "Urban Planning", municipalities: ["Stockholm", "Malmö", "Eskilstuna"] },
+];
+
 // --- View State ---
 let mapTransform = { x: 0, y: 0, scale: 1 };
 let isDragging = false;
@@ -186,9 +198,48 @@ function switchPage(pageId) {
     document.querySelectorAll('.page-section').forEach(section => {
         section.classList.toggle('active', section.id === (pageId + 'Page'));
     });
-    if (pageId === 'landscape') setTimeout(initLandscapeModule, 50);
+    if (pageId === 'landscape') {
+        setTimeout(initLandscapeModule, 50);
+    }
+    if (pageId === 'api-library') {
+        renderApiLibrary();
+    }
 }
 
+/**
+ * Render the API Library Table
+ */
+function renderApiLibrary() {
+    const tableBody = document.getElementById('apiTableBody');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = API_LIBRARY_DATA.map(api => `
+        <tr class="hover:bg-slate-50 transition-colors">
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex flex-col">
+                    <span class="text-sm font-bold text-slate-800">${api.name}</span>
+                    <span class="text-[10px] font-mono text-slate-500">${api.endpoint}</span>
+                </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 py-1 rounded text-[10px] font-bold uppercase ${api.type === 'Public' ? 'bg-emerald-100 text-emerald-700' :
+            api.type === 'Partner' ? 'bg-amber-100 text-amber-700' :
+                'bg-indigo-100 text-indigo-700'
+        }">${api.type}</span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                ${api.service}
+            </td>
+            <td class="px-6 py-4">
+                <div class="flex flex-wrap gap-1">
+                    ${api.municipalities.map(m => `
+                        <span class="px-2 py-0.5 bg-slate-200 text-slate-700 text-[10px] rounded-full">${m}</span>
+                    `).join('')}
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
 // --- API-First Discovery Logic ---
 
 function initLandscapeModule() {
